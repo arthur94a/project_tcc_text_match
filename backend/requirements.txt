@@ -1,0 +1,6 @@
+fastapi
+uvicorn[standard]
+pydantic
+pypdf
+python-multipart
+thefuzz[speedup]  # Novo requisito

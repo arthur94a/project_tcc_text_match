@@ -1,0 +1,23 @@
+version: '3.8'
+
+services:
+  fastapi-pdf-diff:
+    container_name: pdf-diff-api-container
+    
+    # Define o contexto de build para a pasta 'backend'
+    # E especifica que o Dockerfile está dentro dela
+    build: 
+      context: ./backend 
+      dockerfile: Dockerfile
+      
+    ports:
+      - "8000:8000"
+      
+    # Mapeia a pasta backend local para o /app no container. 
+    # Isso é ótimo para o desenvolvimento, pois mudanças no código 
+    # local (main.py) serão refletidas no container (com o --reload, que não usamos aqui, 
+    # mas que é um padrão de desenvolvimento)
+    volumes:
+      - ./backend:/app
+      
+    restart: unless-stopped
