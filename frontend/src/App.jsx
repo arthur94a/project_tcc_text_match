@@ -2,6 +2,8 @@ import { useState, useEffect } from "react";
 import { Header } from "./components/header";
 import { Form } from "./components/form";
 
+import './themes/global.scss'
+
 export function App() {
   const [result, setResult] = useState(null);
 
