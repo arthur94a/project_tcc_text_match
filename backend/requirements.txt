@@ -1,6 +1,6 @@
 fastapi
 uvicorn[standard]
 pydantic
-pypdf
+pdfplumber
 python-multipart
 thefuzz[speedup]  # Novo requisito
