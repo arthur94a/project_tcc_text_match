@@ -3,10 +3,23 @@ from fastapi.responses import JSONResponse
 from pypdf import PdfReader
 import io
 import re
-from thefuzz import process, fuzz 
+from thefuzz import process, fuzz
+from starlette.middleware.cors import CORSMiddleware
 
 # --- CONFIGURAÇÕES GLOBAIS ---
 app = FastAPI(title="PDF Plagiarism/Similarity Checker (Fuzzy Sentence-level)")
+
+origins = [
+    "http://localhost:5173"
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 SIMILARITY_CUTOFF = 80 # Nível mínimo de similaridade (0 a 100)
 MIN_PARTITION_LENGTH = 32 # Partições devem ter no mínimo 32 caracteres

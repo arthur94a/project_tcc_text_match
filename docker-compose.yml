@@ -1,20 +1,30 @@
 services:
-  fastapi-pdf-diff:
-    container_name: pdf-diff-api-container
+    backend:
+        container_name: text-match-api
+        build: 
+          context: ./backend 
+          dockerfile: Dockerfile         
+        ports:
+          - "8000:8000"
+        volumes:
+          - ./backend:/app       
+        restart: unless-stopped
+        networks:
+          - app-network
 
-    build: 
-      context: ./backend 
-      dockerfile: Dockerfile
-      
-    ports:
-      - "8000:8000"
-      
-    volumes:
-      - ./backend:/app
-      
-    restart: unless-stopped
-  web-app-vite:
-    build: ./frontend
-    dockerfile: Dockerfile
+    frontend:
+      build: ./frontend
+      container_name: react_frontend
+      ports:
+        - "5173:5173"
+      volumes:
+        - ./frontend:/app
+        - /app/node_modules
+      environment:
+        - VITE_API_URL=http://localhost:8000
+      networks:
+        - app-network
 
-    ports: "3000:80"
+networks:
+  app-network:
+    driver: bridge
