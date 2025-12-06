@@ -1,3 +1,5 @@
+@use "@themes/colors.scss" as color;
+
 .header {
-  background: black;
+  color: color.$red;
 }
