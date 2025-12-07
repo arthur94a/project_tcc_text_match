@@ -9,6 +9,7 @@ from thefuzz import process, fuzz
 app = FastAPI(title="PDF Plagiarism/Similarity Checker (Fuzzy Sentence-level)")
 
 origins = [
+    "http://localhost",
     "http://localhost:5173"
 ]
 

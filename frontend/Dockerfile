@@ -1,14 +1,15 @@
 # ---------- BUILD ----------
-FROM node:20-alpine AS builder
+FROM node:20-slim AS builder
 
 WORKDIR /app
 
-COPY package*.json ./
-RUN npm i
+COPY package.json package-lock.json ./
+
+RUN npm install
 
 COPY . .
-RUN npm run build
 
+CMD ["npm", "run", "build"]
 
 # ---------- RUN ----------
 FROM nginx:alpine

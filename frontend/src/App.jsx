@@ -14,7 +14,7 @@ export function App() {
   }, [result]);
 
   return (
-    <div style={{ fontFamily: "sans-serif", padding: "2rem" }}>
+    <>
       <Header />
       <Form setResult={setResult} />
 
@@ -48,6 +48,6 @@ export function App() {
           </details>
         </div>
       )} */}
-    </div>
+    </>
   );
 }

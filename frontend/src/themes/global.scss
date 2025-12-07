@@ -2,4 +2,14 @@
 
 body {
   background: colors.$teal-900;
+  font-family: sans-serif;
+}
+
+#root {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  align-items: center;
+  justify-content: center;
+  width: 100vw;
 }

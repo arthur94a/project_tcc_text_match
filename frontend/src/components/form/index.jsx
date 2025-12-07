@@ -1,5 +1,7 @@
 import React, { useState } from "react";
 
+import styles from './styles.module.scss'
+
 export function Form({ setResult }) {
     const [file1, setFile1] = useState(null);
     const [file2, setFile2] = useState(null);
@@ -36,29 +38,51 @@ export function Form({ setResult }) {
     };
 
     return (
-        <form onSubmit={handleSubmit}>
-            <div>
-                <label>Arquivo 1:</label>
+        <form onSubmit={handleSubmit} className={styles.form}>
+            <div className={styles.input_container}>
+                <label className={styles.label}>Arquivo 1:</label>
+
                 <input
                     type="file"
+                    id="file1"
                     accept="application/pdf"
+                    className={styles.hiddenInput}
                     onChange={(e) => setFile1(e.target.files[0])}
                 />
+
+                <label htmlFor="file1" className={styles.fileButton}>
+                    Selecionar PDF
+                </label>
+
+                <span className={styles.fileName}>
+                    {file1?.name || "Nenhum arquivo selecionado"}
+                </span>
             </div>
 
-            <div>
-                <label>Arquivo 2:</label>
+            <div className={styles.input_container}>
+                <label className={styles.label}>Arquivo 2:</label>
+
                 <input
                     type="file"
+                    id="file2"
                     accept="application/pdf"
+                    className={styles.hiddenInput}
                     onChange={(e) => setFile2(e.target.files[0])}
                 />
+
+                <label htmlFor="file2" className={styles.fileButton}>
+                    Selecionar PDF
+                </label>
+
+                <span className={styles.fileName}>
+                    {file2?.name || "Nenhum arquivo selecionado"}
+                </span>
             </div>
 
             <button
                 type="submit"
                 disabled={loading}
-                style={{ marginTop: "1rem" }}
+                className={styles.button}
             >
                 {loading ? "Comparando..." : "Enviar"}
             </button>
