@@ -1,5 +1,9 @@
 @use "@themes/colors.scss" as colors;
 
+* {
+  box-sizing: border-box;
+}
+
 body {
   background: colors.$teal-900;
   font-family: sans-serif;

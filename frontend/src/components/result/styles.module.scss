@@ -1,0 +1,47 @@
+@use "@themes/colors.scss" as color;
+
+.title {
+  text-transform: uppercase;
+}
+
+.card {
+  background: color.$teal-500;
+  max-width: 560px;
+  border-radius: 8px;
+  padding: 16px;
+  color: color.$black;
+}
+
+.card_content {
+  background: color.$teal-900;
+  border-radius: 8px;
+  padding: 8px;
+  color: color.$red;
+}
+
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.label {
+  color: color.$light;
+  font-weight: bold;
+  text-transform: uppercase;
+}
+
+.card_score {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+
+  span {
+    background: color.$red;
+    padding: 8px;
+    border-radius: 8px;
+    font-size: 1.2rem;
+    color: color.$teal-900;
+    font-weight: bold;
+  }
+}
