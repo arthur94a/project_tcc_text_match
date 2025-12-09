@@ -5,12 +5,18 @@ import io
 import re
 from thefuzz import process, fuzz
 
-# --- CONFIGURAÇÕES GLOBAIS ---
-app = FastAPI(title="PDF Plagiarism/Similarity Checker (Fuzzy Sentence-level)")
+# ==================================================
+# CONFIGURAÇÕES GLOBAIS
+# ==================================================
+
+app = FastAPI(
+    title="PDF Similarity Checker with Citation Awareness",
+    description="Sentence-level PDF similarity detection with citation identification",
+)
 
 origins = [
     "http://localhost",
-    "http://localhost:5173"
+    "http://localhost:5173",
 ]
 
 app.add_middleware(
@@ -23,64 +29,154 @@ app.add_middleware(
 
 SIMILARITY_CUTOFF = 80
 MIN_PARTITION_LENGTH = 64
+SENTENCE_CHUNK_SIZE = 3
 
-# Regex para quebrar sentenças
+# ==================================================
+# REGEX E HEURÍSTICAS
+# ==================================================
+
 SENTENCE_SPLIT_REGEX = re.compile(r'(?<=[.?!])\s+')
-
-# Limpeza de artefatos de PDF
 CLEANUP_REGEX = re.compile(r'[\n\r\t]+|\s{2,}')
 
-# Remove seção de referências (mais seguro para textos acadêmicos)
-REFERENCE_REGEX = re.compile(
+REFERENCE_SECTION_REGEX = re.compile(
     r'^\s*(REFERÊNCIAS|Referências|REFERENCES).*',
     re.DOTALL | re.MULTILINE
 )
 
-# --- EXTRAÇÃO DE TEXTO COM SUPORTE A 2 COLUNAS ---
+# --- CITAÇÕES BIBLIOGRÁFICAS ---
+
+AUTHOR_YEAR_REGEX = re.compile(
+    r'\((?:[A-ZÁ-Ú][A-Za-zÁ-ú]+(?:\s+et\s+al\.)?,?\s*\d{4}[a-z]?)\)'
+)
+
+AUTHOR_YEAR_NARRATIVE_REGEX = re.compile(
+    r'\b[A-ZÁ-Ú][a-zá-ú]+\s*\(\d{4}[a-z]?\)'
+)
+
+NARRATIVE_CITATION_REGEX = re.compile(
+    r'(?:Segundo|Conforme|De acordo com)\s+[A-ZÁ-Ú][a-zá-ú]+(?:\s+et\s+al\.)?\s*\(\d{4}[a-z]?\)',
+    re.IGNORECASE
+)
+
+NUMERIC_CITATION_REGEX = re.compile(
+    r'\[\s*\d+(?:\s*,\s*\d+)*\s*\]'
+)
+
+CITATION_VERBS = [
+    "segundo", "conforme", "de acordo com",
+    "apud", "et al", "doi"
+]
+
+# ==================================================
+# EXTRAÇÃO DE TEXTO
+# ==================================================
+
 def extract_pdf_text(pdf_bytes: bytes) -> str:
     text = ""
 
     with pdfplumber.open(io.BytesIO(pdf_bytes)) as pdf:
-        for i, page in enumerate(pdf.pages):
+        for page in pdf.pages:
             page_text = page.extract_text(
                 x_tolerance=2,
                 y_tolerance=2
             )
             if page_text:
                 text += page_text + " "
-            else:
-                print(f"Atenção: página {i + 1} sem texto extraível")
 
     return text
 
+# ==================================================
+# DETECÇÃO E NORMALIZAÇÃO DE CITAÇÕES
+# ==================================================
 
-# --- PRÉ-PROCESSAMENTO E SPLIT ---
-def extract_text_and_split_by_dot(pdf_file: bytes) -> list[dict]:
+def detect_citation(text: str) -> bool:
+    if (
+        AUTHOR_YEAR_REGEX.search(text)
+        or AUTHOR_YEAR_NARRATIVE_REGEX.search(text)
+        or NARRATIVE_CITATION_REGEX.search(text)
+        or NUMERIC_CITATION_REGEX.search(text)
+    ):
+        return True
+
+    lower = text.lower()
+    return any(v in lower for v in CITATION_VERBS)
+
+
+def normalize_citations(text: str) -> str:
+    text = AUTHOR_YEAR_REGEX.sub(" [CITATION] ", text)
+    text = AUTHOR_YEAR_NARRATIVE_REGEX.sub(" [CITATION] ", text)
+    text = NARRATIVE_CITATION_REGEX.sub(" [CITATION] ", text)
+    text = NUMERIC_CITATION_REGEX.sub(" [CITATION] ", text)
+    return text
+
+# ==================================================
+# PARTICIONAMENTO EM BLOCOS DE 3 SENTENÇAS
+# ==================================================
+
+def chunk_sentences(sentences: list[str], chunk_size: int) -> list[str]:
+    chunks = []
+    buffer = []
+
+    for sentence in sentences:
+        sentence = sentence.strip()
+        if not sentence:
+            continue
+
+        buffer.append(sentence)
+
+        if len(buffer) == chunk_size:
+            chunks.append(" ".join(buffer))
+            buffer = []
+
+    if buffer:
+        chunks.append(" ".join(buffer))
+
+    return chunks
+
+
+def extract_text_and_split(pdf_bytes: bytes) -> list[dict]:
     try:
-        full_text = extract_pdf_text(pdf_file)
+        raw_text = extract_pdf_text(pdf_bytes)
 
-        cleaned = CLEANUP_REGEX.sub(" ", full_text).strip()
-        cleaned = REFERENCE_REGEX.sub("", cleaned)
+        cleaned = CLEANUP_REGEX.sub(" ", raw_text).strip()
+        cleaned = REFERENCE_SECTION_REGEX.sub("", cleaned)
 
-        partitions = [
-            p.strip()
-            for p in SENTENCE_SPLIT_REGEX.split(cleaned)
-            if len(p.strip()) >= MIN_PARTITION_LENGTH
-        ]
+        normalized_full = normalize_citations(cleaned)
 
-        return [
-            {"partition_index": i + 1, "content": p}
-            for i, p in enumerate(partitions)
-        ]
+        sentences_original = SENTENCE_SPLIT_REGEX.split(cleaned)
+        sentences_normalized = SENTENCE_SPLIT_REGEX.split(normalized_full)
+
+        chunks_original = chunk_sentences(sentences_original, SENTENCE_CHUNK_SIZE)
+        chunks_normalized = chunk_sentences(sentences_normalized, SENTENCE_CHUNK_SIZE)
+
+        partitions = []
+
+        for idx, (orig, norm) in enumerate(
+            zip(chunks_original, chunks_normalized),
+            start=1
+        ):
+            if len(orig) < MIN_PARTITION_LENGTH:
+                continue
+
+            partitions.append({
+                "partition_index": idx,
+                "content": orig,
+                "normalized_content": norm,
+                "contains_citation": detect_citation(orig)
+            })
+
+        return partitions
 
     except Exception as e:
         raise HTTPException(
             status_code=400,
-            detail=f"Erro ao processar PDF: {e}"
+            detail=f"Erro ao processar PDF: {str(e)}"
         )
 
+# ==================================================
+# ENDPOINT PRINCIPAL
+# ==================================================
 
-# --- ENDPOINT PRINCIPAL ---
 @app.post("/compare-pdfs-by-partition")
 async def compare_pdfs_by_partition(
     file1: UploadFile = File(...),
@@ -95,12 +191,12 @@ async def compare_pdfs_by_partition(
     content1 = await file1.read()
     content2 = await file2.read()
 
-    partitions1 = extract_text_and_split_by_dot(content1)
-    partitions2 = extract_text_and_split_by_dot(content2)
+    partitions1 = extract_text_and_split(content1)
+    partitions2 = extract_text_and_split(content2)
 
-    choices = [p["content"] for p in partitions2]
-    content_to_index2 = {
-        p["content"]: p["partition_index"]
+    choices = [p["normalized_content"] for p in partitions2]
+    content_map_2 = {
+        p["normalized_content"]: p
         for p in partitions2
     }
 
@@ -111,31 +207,36 @@ async def compare_pdfs_by_partition(
             break
 
         best_match = process.extractOne(
-            query=p1["content"],
+            query=p1["normalized_content"],
             choices=choices,
             processor=lambda x: x.lower(),
             scorer=fuzz.token_set_ratio
         )
 
-        if best_match:
-            match_content, similarity_score = best_match
+        if not best_match:
+            continue
 
-            if similarity_score >= SIMILARITY_CUTOFF:
-                similar_partitions.append({
-                    "doc1": {
-                        "partition_index": p1["partition_index"],
-                        "content": p1["content"]
-                    },
-                    "doc2": {
-                        "partition_index": content_to_index2.get(match_content, "Desconhecido"),
-                        "content": match_content
-                    },
-                    "similarity_score": similarity_score,
-                    "similarity_metric": "token_set_ratio (TheFuzz)"
-                })
+        match_text, similarity_score = best_match
+        matched_p2 = content_map_2.get(match_text)
+
+        if similarity_score >= SIMILARITY_CUTOFF and matched_p2:
+            similar_partitions.append({
+                "doc1": {
+                    "partition_index": p1["partition_index"],
+                    "content": p1["content"],
+                    "contains_citation": p1["contains_citation"]
+                },
+                "doc2": {
+                    "partition_index": matched_p2["partition_index"],
+                    "content": matched_p2["content"],
+                    "contains_citation": matched_p2["contains_citation"]
+                },
+                "similarity_score": similarity_score,
+                "similarity_metric": "token_set_ratio (TheFuzz)"
+            })
 
     return {
-        "message": "Comparação concluída com sucesso (pdfplumber + fuzzy matching).",
+        "message": "Comparação concluída com fragmentação por 3 sentenças e detecção de citações.",
         "similarity_cutoff": f"{SIMILARITY_CUTOFF}%",
         "minimum_partition_length": f"{MIN_PARTITION_LENGTH} caracteres",
         "summary": {
@@ -146,10 +247,15 @@ async def compare_pdfs_by_partition(
         "plagiarized_paragraphs": similar_partitions
     }
 
+# ==================================================
+# ENDPOINT ROOT
+# ==================================================
 
-# --- ENDPOINT ROOT ---
 @app.get("/")
 def read_root():
     return {
-        "message": "PDF Plagiarism/Similarity API rodando com suporte a PDFs acadêmicos em duas colunas."
+        "message": (
+            "API de similaridade textual em PDFs com fragmentação por três "
+            "sentenças e identificação de citações bibliográficas."
+        )
     }

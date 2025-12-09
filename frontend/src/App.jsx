@@ -15,6 +15,7 @@ export function App() {
     }
   }, [result]);
 
+  console.log(typeof result, result)
   console.log(typeof paragraphs, paragraphs)
 
   return (
@@ -32,6 +33,8 @@ export function App() {
               doc1={item.doc1.content}
               doc2={item.doc2.content}
               similarityScore={item.similarity_score}
+              citation1={item.doc1.contains_citation}
+              citation2={item.doc2.contains_citation}
             />
           )
         })

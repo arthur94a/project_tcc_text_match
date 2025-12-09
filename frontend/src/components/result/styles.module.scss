@@ -7,6 +7,7 @@
 .card {
   background: color.$teal-500;
   max-width: 560px;
+  width: 100%;
   border-radius: 8px;
   padding: 16px;
   color: color.$black;
@@ -17,6 +18,26 @@
   border-radius: 8px;
   padding: 8px;
   color: color.$red;
+}
+
+.card_content_citation {
+  display: block;
+  margin-top: 16px;
+  font-weight: bold;
+  color: color.$light;
+}
+
+.card_citation {
+  span {
+    display: block;
+    font-weight: bold;
+    text-transform: uppercase;
+    color: color.$light;
+    background: color.$green-100;
+    border-radius: 8px;
+    padding: 8px;
+    width: max-content;
+  }
 }
 
 .container {
