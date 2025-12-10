@@ -2,6 +2,17 @@
 
 .title {
   text-transform: uppercase;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.level {
+  background-color: color.$light;
+  color: color.$teal-900;
+  padding: 8px;
+  border-radius: 8px;
+  font-size: 0.875rem;
 }
 
 .card {

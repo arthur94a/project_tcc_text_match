@@ -3,9 +3,25 @@ import React from "react";
 import styles from './styles.module.scss'
 
 export function Result({index, doc1, doc2, similarityScore, citation1, citation2}) {
+    function calcSimilarityLevel(score) {
+        if(score < 20) {
+            return 'Nível 3'
+        } else if(score > 50) {
+            return 'Nível 5'
+        } else {
+            return 'Nível 4'
+        }
+    }
+
+    const similarityLevel = calcSimilarityLevel(similarityScore)
+
     return (
         <article className={styles.card}>
-            <h2 className={styles.title}>Resultado {index + 1}</h2>
+            <h2 className={styles.title}>
+                Resultado {index + 1}
+
+                <span className={styles.level}>{similarityLevel}</span>
+            </h2>
 
             <section className={styles.container}>
                 <div className={styles.card_content}>
