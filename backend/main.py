@@ -27,7 +27,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-SIMILARITY_CUTOFF = 80
+SIMILARITY_CUTOFF = 20
 MIN_PARTITION_LENGTH = 64
 SENTENCE_CHUNK_SIZE = 3
 
